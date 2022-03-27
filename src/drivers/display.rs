@@ -66,30 +66,30 @@ impl Display {
 
         unsafe {
             // PD4: EXMC_NOE: Output Enable
-            output_enable.set_as_af(0, AFType::OutputPushPull);
+            output_enable.set_as_af(12, AFType::OutputPushPull);
             // PD5: EXMC_NWE: Write enable
-            write_enable.set_as_af(0, AFType::OutputPushPull);
+            write_enable.set_as_af(12, AFType::OutputPushPull);
             // PD7: EXMC_NE0: Chip select
-            cs.set_as_af(0, AFType::OutputPushPull);
+            cs.set_as_af(12, AFType::OutputPushPull);
             // A16: Selects the Command or Data register
-            a16.set_as_af(0, AFType::OutputPushPull);
+            a16.set_as_af(12, AFType::OutputPushPull);
 
-            d0.set_as_af(0, AFType::OutputPushPull);
-            d1.set_as_af(0, AFType::OutputPushPull);
-            d2.set_as_af(0, AFType::OutputPushPull);
-            d3.set_as_af(0, AFType::OutputPushPull);
-            d4.set_as_af(0, AFType::OutputPushPull);
-            d5.set_as_af(0, AFType::OutputPushPull);
-            d6.set_as_af(0, AFType::OutputPushPull);
-            d7.set_as_af(0, AFType::OutputPushPull);
-            d8.set_as_af(0, AFType::OutputPushPull);
-            d9.set_as_af(0, AFType::OutputPushPull);
-            d10.set_as_af(0, AFType::OutputPushPull);
-            d11.set_as_af(0, AFType::OutputPushPull);
-            d12.set_as_af(0, AFType::OutputPushPull);
-            d13.set_as_af(0, AFType::OutputPushPull);
-            d14.set_as_af(0, AFType::OutputPushPull);
-            d15.set_as_af(0, AFType::OutputPushPull);
+            d0.set_as_af(12, AFType::OutputPushPull);
+            d1.set_as_af(12, AFType::OutputPushPull);
+            d2.set_as_af(12, AFType::OutputPushPull);
+            d3.set_as_af(12, AFType::OutputPushPull);
+            d4.set_as_af(12, AFType::OutputPushPull);
+            d5.set_as_af(12, AFType::OutputPushPull);
+            d6.set_as_af(12, AFType::OutputPushPull);
+            d7.set_as_af(12, AFType::OutputPushPull);
+            d8.set_as_af(12, AFType::OutputPushPull);
+            d9.set_as_af(12, AFType::OutputPushPull);
+            d10.set_as_af(12, AFType::OutputPushPull);
+            d11.set_as_af(12, AFType::OutputPushPull);
+            d12.set_as_af(12, AFType::OutputPushPull);
+            d13.set_as_af(12, AFType::OutputPushPull);
+            d14.set_as_af(12, AFType::OutputPushPull);
+            d15.set_as_af(12, AFType::OutputPushPull);
         }
 
         unsafe {
@@ -104,14 +104,13 @@ impl Display {
 
             fsmc.btr1().write(|w| {
                 // Access Mode A
-                w.set_accmod(vals::BtrAccmod::A);
-                // Address setup time: not needed.
-                w.set_addset(0);
-                // Data setup and hold time.
-                // (2+1)/120MHz = 25ns. Should be plenty enough.
-                // Typically, 10ns is the minimum.
-                w.set_datast(2);
-                w.set_datlat(2);
+                w.set_accmod(vals::BtrAccmod::B);
+
+                // Setup according to mono-x stock firmware
+                w.set_addset(6);
+                w.set_addhld(6);
+                w.set_datast(20);
+                w.set_datlat(0);
             });
         }
 
@@ -140,50 +139,31 @@ impl Display {
         self.reset.set_high();
         delay_ms(50);
 
-        // No-op
-        self.reg_write(0x00, &[1]);
-
-        // SW reset
-        delay_ms(50);
-        self.reg_write(0x00, &[]);
+        // Setup according to stock fw
+        // Mono-x ILI9488 480x340
+        self.reg_write (0xE0, &[0x00, 0x13, 0x18, 0x04, 0x0f, 0x06, 0x3a, 0x56, 0x4d, 0x03, 0x0a, 0x06, 0x30, 0x3e, 0x0f]);
+        self.reg_write (0xE1, &[0x00, 0x13, 0x18, 0x01, 0x11, 0x06, 0x38, 0x34, 0x4d, 0x06, 0x0d, 0x0b, 0x31, 0x37, 0x0f]);
+        self.reg_write (0xc0, &[0x18, 0x17]);
+        self.reg_write (0xc1, &[0x41]);
+        self.reg_write (0xc5, &[0x00, 0x40, 0x00, 0x40]);
+        self.reg_write (0x36, &[0x2a]);
+        self.reg_write (0x3a, &[0x55]);
+        self.reg_write (0xb0, &[0x00]);
+        self.reg_write (0xb4, &[0x01]);
+        self.reg_write (0xb6, &[0x02, 0x02]);
+        self.reg_write (0xe9, &[0x00]);
+        self.reg_write (0xf7, &[0xa9, 0x51, 0x2c, 0x82]);
+        self.reg_write (0x20, &[]);
+        self.reg_write (0x11, &[]);
+        self.reg_write (0x29, &[]);
+        self.reg_write (0x2c, &[]);
+        self.reg_write (0x2a, &[0x00, 0x00, 0x01, 0x01df]);
+        self.reg_write (0x2b, &[0x00, 0x00, 0x01, 0x013f]);
         
         // Read display ID4
         let mut id = [0_u16; 4];
         self.reg_read (0xD3, &mut id);
         debug! ("read:{:?}", id);
-
-        /*
-        self.reg_write(0xCF, &[0x00, 0xC1, 0x30]);
-        self.reg_write(0xED, &[0x64, 0x03, 0x12, 0x81]);
-        self.reg_write(0xE8, &[0x85, 0x10, 0x7A]);
-        self.reg_write(0xCB, &[0x39, 0x2C, 0x00, 0x34, 0x02]);
-        self.reg_write(0xF7, &[0x20]);
-        self.reg_write(0xEA, &[0x00,0x00]);
-        self.reg_write(0xC0, &[0x1B]);
-        self.reg_write(0xC1, &[0x01]);
-        self.reg_write(0xC5, &[0x30, 0x30]);
-        self.reg_write(0xC7, &[0xB7]);
-        self.reg_write(0x3A, &[0x55]);
-        self.reg_write(0x36, &[0xA8]);
-        self.reg_write(0xB1, &[0x00, 0x12]);
-        self.reg_write(0xB6, &[0x0A, 0xA2]);
-        self.reg_write(0x44, &[0x02]);
-        self.reg_write(0xF2, &[0x00]);
-
-        // Gamma settings
-        self.reg_write(0x26, &[0x01]);
-        self.reg_write(0xE0, &[15, 42, 40, 8, 14, 8, 84, 169, 67, 10, 15, 0, 0, 0, 0]);
-        self.reg_write(0xE1, &[0, 21, 23, 7, 17, 6, 43, 86, 60, 5, 16, 15, 63, 63, 15]);
-         */
-        // Sleep Out
-        self.reg_write(0x11, &[]);
-        delay_ms(8);
-
-        // Display ON
-        self.reg_write(0x29, &[]);
-        delay_ms(1);
-
-        //self.fill_screen(0);
 
         delay_ms(110);
     }

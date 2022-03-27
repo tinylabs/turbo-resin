@@ -5,9 +5,9 @@ pub mod ext_flash {
 }
 
 pub mod display {
-    pub const WIDTH: u16 = 320;
-    pub const HEIGHT: u16 = 240;
-    pub const LVGL_BUFFER_LEN: usize = 7680; // 1/10th of the display size
+    pub const WIDTH: u16 = 480;
+    pub const HEIGHT: u16 = 320;
+    pub const LVGL_BUFFER_LEN: usize = 15360; // 1/10th of the display size
 }
 
 pub mod zaxis {

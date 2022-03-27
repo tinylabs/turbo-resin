@@ -15,10 +15,10 @@ set print asm-demangle on
 #break rust_begin_unwind
 
 # Loads the plugin to read registers in readable format
-#source ./repos/PyCortexMDebug/scripts/gdb.py
+source ./repos/PyCortexMDebug/scripts/gdb.py
 #svd_load ./misc/gd32f307.svd
 #svd_load ./misc/stm32f107.svd
-
+svd_load STMicro STM32F40x.svd
 
 # Print 5 instructions every time we break.
 # Note that `layout asm` is also pretty good, but my up arrow doesn't work

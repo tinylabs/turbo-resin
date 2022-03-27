@@ -49,7 +49,7 @@ impl Machine {
 
         //let _notsure = gpioa.pa6.into_push_pull_output(&mut gpioa.crl);
         let mut display = Display::new(
-            p.PC6, p.PA10,
+            p.PG2, p.PG8,
             p.PD4, p.PD5, p.PD7, p.PD11,
             p.PD14, p.PD15, p.PD0, p.PD1, p.PE7, p.PE8,
             p.PE9, p.PE10, p.PE11, p.PE12, p.PE13,

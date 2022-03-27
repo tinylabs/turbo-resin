@@ -56,7 +56,7 @@ run: build
 	$(CARGO) run $(BUILD_FLAGS) -q
 
 attach:
-	arm-none-eabi-gdb -q -x gdb/attach.gdb ${TARGET_ELF}
+	gdb-multiarch -q -x gdb/attach.gdb ${TARGET_ELF}
 
 clean:
 	$(CARGO) clean

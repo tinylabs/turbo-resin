@@ -10,8 +10,8 @@ use embassy_stm32::peripherals as p;
 use crate::consts::display::*;
 
 pub struct Display {
-    pub reset: Output<'static, p::PC6>,
-    pub backlight: Output<'static, p::PA10>,
+    pub reset: Output<'static, p::PG2>,
+    pub backlight: Output<'static, p::PG8>,
 }
 
 impl Display {
@@ -31,8 +31,8 @@ impl Display {
 
     #[inline(never)]
     pub fn new(
-        reset: p::PC6,
-        backlight: p::PA10,
+        reset: p::PG2,
+        backlight: p::PG8,
 
         output_enable: p::PD4,
         write_enable: p::PD5,
@@ -117,13 +117,17 @@ impl Display {
 
         Self { reset, backlight }
     }
-
+ 
     pub fn write_cmd(&mut self, v: u16) {
         unsafe { Self::TFT_CMD.write_volatile(v); }
     }
 
     pub fn write_data(&mut self, v: u16) {
         unsafe { Self::TFT_DATA.write_volatile(v); }
+    }
+
+    pub fn read_data(&mut self)->u16 {
+        unsafe { return Self::TFT_DATA.read_volatile(); }
     }
 
     pub fn init(&mut self) {
@@ -136,37 +140,50 @@ impl Display {
         self.reset.set_high();
         delay_ms(50);
 
-        self.cmd(0xCF, &[0x00, 0xC1, 0x30]);
-        self.cmd(0xED, &[0x64, 0x03, 0x12, 0x81]);
-        self.cmd(0xE8, &[0x85, 0x10, 0x7A]);
-        self.cmd(0xCB, &[0x39, 0x2C, 0x00, 0x34, 0x02]);
-        self.cmd(0xF7, &[0x20]);
-        self.cmd(0xEA, &[0x00,0x00]);
-        self.cmd(0xC0, &[0x1B]);
-        self.cmd(0xC1, &[0x01]);
-        self.cmd(0xC5, &[0x30, 0x30]);
-        self.cmd(0xC7, &[0xB7]);
-        self.cmd(0x3A, &[0x55]);
-        self.cmd(0x36, &[0xA8]);
-        self.cmd(0xB1, &[0x00, 0x12]);
-        self.cmd(0xB6, &[0x0A, 0xA2]);
-        self.cmd(0x44, &[0x02]);
-        self.cmd(0xF2, &[0x00]);
+        // No-op
+        self.reg_write(0x00, &[1]);
+
+        // SW reset
+        delay_ms(50);
+        self.reg_write(0x00, &[]);
+        
+        // Read display ID4
+        let mut id = [0_u16; 4];
+        self.reg_read (0xD3, &mut id);
+        debug! ("read:{:?}", id);
+
+        /*
+        self.reg_write(0xCF, &[0x00, 0xC1, 0x30]);
+        self.reg_write(0xED, &[0x64, 0x03, 0x12, 0x81]);
+        self.reg_write(0xE8, &[0x85, 0x10, 0x7A]);
+        self.reg_write(0xCB, &[0x39, 0x2C, 0x00, 0x34, 0x02]);
+        self.reg_write(0xF7, &[0x20]);
+        self.reg_write(0xEA, &[0x00,0x00]);
+        self.reg_write(0xC0, &[0x1B]);
+        self.reg_write(0xC1, &[0x01]);
+        self.reg_write(0xC5, &[0x30, 0x30]);
+        self.reg_write(0xC7, &[0xB7]);
+        self.reg_write(0x3A, &[0x55]);
+        self.reg_write(0x36, &[0xA8]);
+        self.reg_write(0xB1, &[0x00, 0x12]);
+        self.reg_write(0xB6, &[0x0A, 0xA2]);
+        self.reg_write(0x44, &[0x02]);
+        self.reg_write(0xF2, &[0x00]);
 
         // Gamma settings
-        self.cmd(0x26, &[0x01]);
-        self.cmd(0xE0, &[15, 42, 40, 8, 14, 8, 84, 169, 67, 10, 15, 0, 0, 0, 0]);
-        self.cmd(0xE1, &[0, 21, 23, 7, 17, 6, 43, 86, 60, 5, 16, 15, 63, 63, 15]);
-
+        self.reg_write(0x26, &[0x01]);
+        self.reg_write(0xE0, &[15, 42, 40, 8, 14, 8, 84, 169, 67, 10, 15, 0, 0, 0, 0]);
+        self.reg_write(0xE1, &[0, 21, 23, 7, 17, 6, 43, 86, 60, 5, 16, 15, 63, 63, 15]);
+         */
         // Sleep Out
-        self.cmd(0x11, &[]);
+        self.reg_write(0x11, &[]);
         delay_ms(8);
 
         // Display ON
-        self.cmd(0x29, &[]);
+        self.reg_write(0x29, &[]);
         delay_ms(1);
 
-        self.fill_screen(0);
+        //self.fill_screen(0);
 
         delay_ms(110);
     }
@@ -176,10 +193,17 @@ impl Display {
         self.write_data(v & 0xFF);
     }
 
-    pub fn cmd(&mut self, cmd: u16, args: &[u16]) {
+    pub fn reg_write(&mut self, cmd: u16, args: &[u16]) {
         self.write_cmd(cmd);
         for a in args {
             self.write_data(*a);
+        }
+    }
+
+    pub fn reg_read(&mut self, cmd: u16, dst: &mut [u16]) {
+        self.write_cmd(cmd);
+        for n in 0..dst.len() {
+            dst[n] = self.read_data();
         }
     }
 

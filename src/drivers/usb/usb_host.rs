@@ -11,10 +11,11 @@ pub(crate) const REGS: OtgFs = pac::USB_OTG_FS;
 
 use embassy::{
     channel::signal::Signal,
-    time::{Duration, Timer},
+    time::{Duration, Timer, Delay},
 };
 
 use super::{Channel, enumerate, InterfaceHandler};
+use crate::drivers::delay_ms;
 
 pub type UsbResult<T> = Result<T, ()>;
 
@@ -61,6 +62,24 @@ impl UsbHost {
 
         // We follow the code from the STM32CubeF1 SDK.
         unsafe {
+            // Initialize global FS USB core according to
+            // https://www.st.com/resource/en/reference_manual/
+            // rm0090-stm32f405415-stm32f407417-stm32f427437-and-stm32f429439-
+            // advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+            {
+                // Unmask global interrupts for HSUSB
+                //REGS.gahbcfg().modify(|w|
+                //                      w.set_gint (true)
+                //);
+
+                // 
+            }
+
+
+            // Initialize host mode
+            {
+            }
+
             // USB_CoreInit() from the SDK
             {
                 // Select full-speed Embedded PHY. This is what the device will
@@ -74,11 +93,11 @@ impl UsbHost {
                 // The following performs a Soft Reset. It doesn't seem that it's needed.
                 // After all, we just did a hard reset via the RCC register.
                 // We changed fslsp, but that only needs a port reset, which will come.
-                /*
                 while REGS.grstctl().read().ahbidl() == false {}
                 REGS.grstctl().modify(|w| w.set_csrst(true));
-                while REGS.grstctl().read().csrst() {}
-                */
+                while REGS.grstctl().read().csrst() {
+                    delay_ms (1);
+                }
 
                 // Activate the USB Transceiver
                 // It's a bit weird, it's called power down.
@@ -91,8 +110,15 @@ impl UsbHost {
                     // Force host mode.
                     .set_fhmod(true)
                 );
+
+                // Delay mandatory 25ms after setting
+                delay_ms (25);
+                
                 // Wait for the current mode of operation to be host mode
-                while REGS.gintsts().read().cmod() == false {}
+                while REGS.gintsts().read().cmod() == false {
+                    // Add delay so debugger can break
+                    delay_ms (1);
+                }
             }
 
             // USB_HostInit() from the SDK

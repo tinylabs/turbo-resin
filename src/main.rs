@@ -62,7 +62,7 @@ use crate::{
 
 static LAST_TOUCH_EVENT: Mutex<RefCell<Option<TouchEvent>>> = Mutex::new(RefCell::new(None));
 static Z_AXIS: Forever<zaxis::MotionControlAsync> = Forever::new();
-static USB_HOST: Forever<UsbHost> = Forever::new();
+//static USB_HOST: Forever<UsbHost> = Forever::new();
 static TASK_RUNNER: Forever<TaskRunner<ui::Task>> = Forever::new();
 static LCD: Forever<Lcd> = Forever::new();
 
@@ -75,6 +75,8 @@ mod maximum_priority_tasks {
     }
 }
 
+/*
+EBB: Disable USB for testing
 mod high_priority_tasks {
     use super::*;
 
@@ -83,6 +85,7 @@ mod high_priority_tasks {
         unsafe { USB_HOST.steal().on_interrupt() }
     }
 }
+ */
 
 mod medium_priority_tasks {
     use crate::drivers::{lcd::Color, read_cycles};
@@ -98,6 +101,7 @@ mod medium_priority_tasks {
     }
     */
 
+    /* EBB: Disable USB for testing
     #[embassy::task]
     pub async fn usb_stack() {
         async fn usb_main(usb: &mut UsbHost) -> UsbResult<()> {
@@ -179,7 +183,7 @@ mod medium_priority_tasks {
             Timer::after(Duration::from_millis(100)).await
         }
     }
-
+*/
     #[embassy::task]
     pub async fn touch_screen_task(mut touch_screen: TouchScreen) {
         loop {
@@ -281,7 +285,7 @@ fn main() -> ! {
 
     let (lvgl, display) = lvgl_init(machine.display);
 
-    USB_HOST.put(machine.usb_host);
+    //USB_HOST.put(machine.usb_host);
     let lcd = LCD.put(machine.lcd);
     debug!("FPGA version: {:x}", lcd.get_version());
 
@@ -298,12 +302,14 @@ fn main() -> ! {
         irq.enable();
     }
 
+    /*
     // High priority for the USB port
     {
         let irq: interrupt::OTG_FS = unsafe { ::core::mem::transmute(()) };
         irq.set_priority(interrupt::Priority::P5);
         irq.enable();
     }
+     */
 
     // Medium priority executor. It interrupts the low priority tasks (UI rendering)
     {
@@ -318,7 +324,7 @@ fn main() -> ! {
             spawner.spawn(medium_priority_tasks::touch_screen_task(touch_screen)).unwrap();
             spawner.spawn(medium_priority_tasks::lvgl_tick_task(lvgl_ticks)).unwrap();
             spawner.spawn(medium_priority_tasks::main_task()).unwrap();
-            spawner.spawn(medium_priority_tasks::usb_stack()).unwrap();
+            //spawner.spawn(medium_priority_tasks::usb_stack()).unwrap();
 
             //spawner.spawn(medium_priority_tasks::lcd_task(lcd_receiver)).unwrap();
         });
